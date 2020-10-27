@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -26,30 +27,61 @@ object CartActor {
 class CartActor extends Actor {
 
   import CartActor._
-  var cart = Cart.empty
+  val cart: Cart = Cart.empty
 
   private val log       = Logging(context.system, this)
-  val cartTimerDuration = 5 seconds
+  val cartTimerDuration: FiniteDuration = 100 seconds
 
-  private def scheduleTimer: Cancellable = ???
+  implicit val executionContext: ExecutionContextExecutor = context.system.dispatcher
+  private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
+
+  override def preStart(): Unit = {
+    log.debug("prestart")
+    super.preStart()
+  }
 
   def receive: Receive = LoggingReceive{
     case CartActor.AddItem(item) => {
-      cart.addItem(item)
-      // todo
-//      context become nonEmpty(cart, scheduleTimer)
+      context become nonEmpty(cart.addItem(item), scheduleTimer)
     }
   }
 
-  def empty: Receive = ???
+  def empty: Receive = {
+    case CartActor.AddItem(item) => {
+      context become nonEmpty(cart.addItem(item),scheduleTimer)
+    }
+    case _ => {}
+  }
 
   def nonEmpty(cart: Cart, timer: Cancellable): Receive = LoggingReceive {
     case CartActor.AddItem(item) => {
       cart.addItem(item)
     }
+    case CartActor.RemoveItem(item) => {
+      val newCart: Cart = cart.removeItem(item)
+      if (newCart.size == 0){
+        context become empty
+      }
+    }
+    case CartActor.StartCheckout => {
+      timer.cancel()
+      context become inCheckout(cart)
+    }
+    case CartActor.ExpireCart => {
+      context become empty
+    }
   }
 
-  def inCheckout(cart: Cart): Receive = ???
+  def inCheckout(cart: Cart): Receive = LoggingReceive {
+    case CartActor.ConfirmCheckoutCancelled => {
+      context become nonEmpty(cart, scheduleTimer)
+    }
+    case CartActor.ConfirmCheckoutClosed => {
+      context become empty
+    }
+    case CartActor.AddItem => {}
+
+  }
 
 }
 
@@ -59,7 +91,11 @@ object CartApp extends App{
   val mainActor = system.actorOf(Props[CartActor])
 
   mainActor ! CartActor.AddItem(5)
+  mainActor ! CartActor.RemoveItem(5)
+
+  import scala.concurrent.Await
 
 
 
+  Await.result(system.whenTerminated, Duration.Inf)
 }
