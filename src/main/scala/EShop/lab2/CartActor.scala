@@ -35,11 +35,6 @@ class CartActor extends Actor {
   implicit val executionContext: ExecutionContextExecutor = context.system.dispatcher
   private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
 
-  override def preStart(): Unit = {
-    log.debug("prestart")
-    super.preStart()
-  }
-
   def receive: Receive = LoggingReceive{
     case CartActor.AddItem(item) => {
       context become nonEmpty(cart.addItem(item), scheduleTimer)
