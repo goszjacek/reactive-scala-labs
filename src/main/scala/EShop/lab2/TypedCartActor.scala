@@ -50,7 +50,7 @@ class TypedCartActor {
       if (newCart.size == 0) empty
       Behaviors.same
     }
-    case StartCheckout => inCheckout(cart)
+    case StartCheckout(_) => inCheckout(cart)
     case ExpireCart => empty
   }
 

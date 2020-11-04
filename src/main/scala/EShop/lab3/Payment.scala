@@ -1,6 +1,9 @@
 package EShop.lab3
 
+import EShop.lab2.Checkout
+import EShop.lab3.Payment.DoPayment
 import akka.actor.{Actor, ActorRef, Props}
+import akka.event.LoggingReceive
 
 object Payment {
 
@@ -17,6 +20,11 @@ class Payment(
   checkout: ActorRef
 ) extends Actor {
 
-  override def receive: Receive = ???
+  override def receive: Receive = LoggingReceive {
+    case DoPayment =>
+      sender() ! OrderManager.ConfirmPaymentReceived
+      checkout ! Checkout.ConfirmPaymentReceived
+      context.stop(self)
+  }
 
 }

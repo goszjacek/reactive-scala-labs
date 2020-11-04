@@ -78,7 +78,7 @@ class TypedCheckout(
         timer.cancel()
        cancelled
       }
-      case SelectPayment(_) => {
+      case SelectPayment(payment , orderManagerRef ) => {
         processingPayment(timer)
       }
       case CancelCheckout => {

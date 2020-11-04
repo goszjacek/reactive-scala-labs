@@ -2,6 +2,7 @@ package EShop.lab3
 
 import EShop.lab2.{CartActor, Checkout}
 import EShop.lab3.OrderManager._
+import akka.actor.typed.Props
 import akka.actor.{Actor, ActorRef}
 import akka.event.LoggingReceive
 
@@ -25,13 +26,29 @@ class OrderManager extends Actor {
 
   override def receive = uninitialized
 
-  def uninitialized: Receive = ???
+  def uninitialized: Receive = LoggingReceive {
+    case AddItem(item) =>
+      val cartActor = context.actorOf(CartActor.props(), "CartActor")
+      cartActor ! AddItem(item)
+      context become open(cartActor)
+      sender() ! Done
+  }
 
-  def open(cartActor: ActorRef): Receive = ???
+  def open(cartActor: ActorRef): Receive = LoggingReceive{
+    case AddItem(item) => cartActor ! AddItem(item)
+    case RemoveItem(item) => cartActor ! RemoveItem(item)
+    case Buy =>
+      inCheckout(cartActor, context.self)
 
-  def inCheckout(cartActorRef: ActorRef, senderRef: ActorRef): Receive = ???
+  }
 
-  def inCheckout(checkoutActorRef: ActorRef): Receive = ???
+  def inCheckout(cartActorRef: ActorRef, senderRef: ActorRef): Receive = {
+    inCheckout(context.actorOf(Checkout.props(senderRef)))
+  }
+
+  def inCheckout(checkoutActorRef: ActorRef): Receive = {
+    case _ => {}
+  }
 
   def inPayment(senderRef: ActorRef): Receive = ???
 
