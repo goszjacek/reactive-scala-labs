@@ -1,5 +1,6 @@
 package EShop.lab2
 
+import EShop.lab3.OrderManager.ConfirmCheckoutStarted
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
@@ -51,6 +52,8 @@ class CartActor extends Actor {
     case GetItems => sender() ! cart
   }
 
+  override def unhandled(message: Any): Unit = print(s"<<< UNHANDLED $message >>> ")
+
   def nonEmpty(cart: Cart, timer: Cancellable): Receive = LoggingReceive {
     case CartActor.AddItem(item) => {
       cart.addItem(item)
@@ -62,7 +65,8 @@ class CartActor extends Actor {
       }
     }
     case CartActor.StartCheckout => {
-      timer.cancel()
+      val checkout = context.actorOf(Checkout.props(self), "checkout")
+      sender() ! ConfirmCheckoutStarted(checkout)
       context become inCheckout(cart)
     }
     case CartActor.ExpireCart => {

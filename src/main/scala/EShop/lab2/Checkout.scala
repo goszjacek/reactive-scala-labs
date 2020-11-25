@@ -1,7 +1,8 @@
 package EShop.lab2
 
 import EShop.lab2.Checkout._
-import akka.actor.{Actor, ActorRef,  Cancellable, Props}
+import EShop.lab3.{OrderManager, Payment}
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 
 import scala.concurrent.ExecutionContextExecutor
@@ -72,7 +73,10 @@ class Checkout(
       timer.cancel()
       context become cancelled
     }
-    case SelectPayment(_) => {
+    case SelectPayment(method) => {
+      val orderManger = sender()
+      val paymentRef = context.actorOf(Payment.props(method = method, orderManager = orderManger, checkout = self ), "PaymentActor")
+      sender() ! OrderManager.ConfirmPaymentStarted(paymentRef)
       context become processingPayment(timer)
     }
     case CancelCheckout => {
