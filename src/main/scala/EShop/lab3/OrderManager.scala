@@ -69,11 +69,6 @@ class OrderManager extends Actor {
 
   }
 
-//  def inCheckout(cartActorRef: ActorRef, senderRef: ActorRef): Receive = {
-//    inCheckout(context.actorOf(Checkout.props(senderRef)))
-//
-//  }
-
   def inCheckout(checkoutActorRef: ActorRef): Receive = {
     case SelectDeliveryAndPaymentMethod(delivery, payment) =>
       checkoutActorRef ! Checkout.SelectDeliveryMethod(delivery)
