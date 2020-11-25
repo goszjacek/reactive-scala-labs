@@ -1,5 +1,6 @@
 package EShop.lab2
 
+import EShop.lab2.CartActor.ConfirmCheckoutClosed
 import EShop.lab2.Checkout._
 import EShop.lab3.{OrderManager, Payment}
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
@@ -95,6 +96,8 @@ class Checkout(
     }
     case ConfirmPaymentReceived => {
       timer.cancel()
+      sender() ! ConfirmCheckoutClosed
+      cartActor ! ConfirmCheckoutClosed
       context become closed
     }
   }
