@@ -22,8 +22,8 @@ class Payment(
 
   override def receive: Receive = LoggingReceive {
     case DoPayment =>
-      sender() ! OrderManager.ConfirmPaymentReceived
       checkout ! Checkout.ConfirmPaymentReceived
+      orderManager ! OrderManager.ConfirmPaymentReceived
       context.stop(self)
   }
 

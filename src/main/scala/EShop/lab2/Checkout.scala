@@ -48,66 +48,54 @@ class Checkout(
   private def schedulePaymentTimer: Cancellable = scheduler.scheduleOnce(paymentTimerDuration, self, ExpirePayment)
 
   def receive: Receive = LoggingReceive{
-    case StartCheckout => {
+    case StartCheckout =>
       context become selectingDelivery(scheduleCheckoutTimer)
-    }
   }
 
   def selectingDelivery(timer: Cancellable): Receive = LoggingReceive {
-    case CancelCheckout => {
+    case CancelCheckout =>
       timer.cancel()
       context become cancelled
-    }
-    case ExpireCheckout => {
+    case ExpireCheckout =>
       context become cancelled
-    }
-    case SelectDeliveryMethod(_) => {
+    case SelectDeliveryMethod(_) =>
       context become selectingPaymentMethod(schedulePaymentTimer)
-    }
   }
 
   def selectingPaymentMethod(timer: Cancellable): Receive = LoggingReceive{
-    case ExpirePayment => {
+    case ExpirePayment =>
       context become cancelled
-    }
-    case ExpireCheckout => {
+    case ExpireCheckout =>
       timer.cancel()
       context become cancelled
-    }
-    case SelectPayment(method) => {
+    case SelectPayment(method) =>
       val orderManger = sender()
       val paymentRef = context.actorOf(Payment.props(method = method, orderManager = orderManger, checkout = self ), "PaymentActor")
       sender() ! OrderManager.ConfirmPaymentStarted(paymentRef)
       context become processingPayment(timer)
-    }
-    case CancelCheckout => {
+    case CancelCheckout =>
       timer.cancel()
       context become cancelled
-    }
   }
 
   def processingPayment(timer: Cancellable): Receive = LoggingReceive{
-    case ExpirePayment => {
+    case ExpirePayment =>
       context become cancelled
-    }
-    case CancelCheckout => {
+    case CancelCheckout =>
       timer.cancel()
       context become cancelled
-    }
-    case ConfirmPaymentReceived => {
+    case ConfirmPaymentReceived =>
       timer.cancel()
-      sender() ! ConfirmCheckoutClosed
       cartActor ! ConfirmCheckoutClosed
       context become closed
-    }
   }
 
   def cancelled: Receive = LoggingReceive {
-    case any =>
+    case _ =>
   }
 
   def closed: Receive = LoggingReceive{
-    case any =>
+    case _ =>
   }
 
 }

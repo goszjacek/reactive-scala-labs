@@ -7,7 +7,7 @@ import EShop.lab3.Payment.DoPayment
 import akka.actor.Status.Success
 import akka.actor.typed.Props
 import akka.actor.{Actor, ActorRef}
-import akka.event.LoggingReceive
+import akka.event.{Logging, LoggingReceive}
 import akka.pattern.ask
 import akka.util.Timeout
 
@@ -42,7 +42,7 @@ object OrderManager {
 
 class OrderManager extends Actor {
   implicit val timeout: Timeout = Timeout(5 seconds)
-
+  val log = Logging(context.system, this)
   override def receive = uninitialized
 
   def uninitialized: Receive = LoggingReceive {
@@ -53,7 +53,6 @@ class OrderManager extends Actor {
       sender() ! Done
   }
 
-  // start checkout
   def open(cartActor: ActorRef): Receive = LoggingReceive {
     case AddItem(item) => cartActor ! CartActor.AddItem(item)
       sender() ! Done
@@ -73,25 +72,29 @@ class OrderManager extends Actor {
   def inCheckout(checkoutActorRef: ActorRef): Receive = {
     case SelectDeliveryAndPaymentMethod(delivery, payment) =>
       checkoutActorRef ! Checkout.SelectDeliveryMethod(delivery)
+      checkoutActorRef ! Checkout.SelectPayment(payment)
+      context become inPayment(sender())
 
-      val future          = checkoutActorRef ? Checkout.SelectPayment(payment)
-      val result          = Await.result(future, timeout.duration).asInstanceOf[ConfirmPaymentStarted]
-      val paymentActorRef = result.paymentRef
-      context become inPayment(paymentActorRef)
-      sender() ! Done
   }
 
-  def inPayment(paymentActorRef: ActorRef): Receive = {
+  def inPayment(senderRef: ActorRef): Receive = {
+    case ConfirmPaymentStarted(paymentRef) =>
+      context become inPayment(paymentRef, senderRef)
+      senderRef ! Done
+      log.debug("ConfirmPaymentStarted")
+  }
+
+  def inPayment(paymentActorRef: ActorRef, senderRef: ActorRef): Receive = {
     case Pay =>
-      val future = paymentActorRef ? DoPayment
-      Await.result(future, timeout.duration)
+      paymentActorRef ! DoPayment
+      context become inPayment(paymentActorRef, sender())
+    case ConfirmPaymentReceived =>
       context become finished
-      sender() ! Done
+      senderRef ! Done
   }
 
   def finished: Receive = {
     case _ =>
       sender ! "order manager finished job"
-      sender() ! Done
   }
 }
