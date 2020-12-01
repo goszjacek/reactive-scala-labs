@@ -14,6 +14,7 @@ import akka.util.Timeout
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 object OrderManager {
 
@@ -59,14 +60,17 @@ class OrderManager extends Actor {
       sender() ! Done
     case RemoveItem(item) => cartActor ! CartActor.RemoveItem(item)
     case Buy =>
-      val possibleResult = cartActor ? CartActor.StartCheckout
-      val result = Await.result(possibleResult, timeout.duration)
-      val checkoutResult = result.asInstanceOf[ConfirmCheckoutStarted]
-      val checkoutRef  = checkoutResult.checkoutRef
+      cartActor ! CartActor.StartCheckout
+      context become inCheckout(cartActor, self)
+      sender() ! Done
+
+  }
+
+  def inCheckout(cartActorRef: ActorRef, senderRef: ActorRef): Receive = {
+    case ConfirmCheckoutStarted(checkoutRef) =>
       checkoutRef ! Checkout.StartCheckout
       context become inCheckout(checkoutRef)
       sender() ! Done
-
   }
 
   def inCheckout(checkoutActorRef: ActorRef): Receive = {
