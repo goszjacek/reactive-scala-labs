@@ -1,30 +1,13 @@
 package EShop.lab2
 
-import EShop.lab2
+import EShop.lab3.{TypedOrderManager, TypedPayment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.event.Logging
-
-import scala.language.postfixOps
-import scala.concurrent.duration._
-import EShop.lab3.TypedOrderManager
-
-object TypedCheckout {
-
-  sealed trait Data
-  case object Uninitialized                               extends Data
-  case class SelectingDeliveryStarted(timer: Cancellable) extends Data
-  case class ProcessingPaymentStarted(timer: Cancellable) extends Data
-
-import EShop.lab3.{TypedOrderManager, TypedPayment}
-import akka.actor.Cancellable
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
 import cats.implicits.catsSyntaxOptionId
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 object TypedCheckout {
 
