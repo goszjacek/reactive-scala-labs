@@ -2,16 +2,18 @@ package EShop.lab4
 
 import EShop.lab2.{Cart, CartActor, Checkout}
 import EShop.lab3.OrderManager.ConfirmCheckoutStarted
-import akka.actor.TypedActor.dispatcher
+import EShop.lab4.PersistentCartActor.itsCheckout
 import akka.actor.{Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 import akka.persistence.PersistentActor
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 object PersistentCartActor {
 
-  def props(persistenceId: String) = Props(new PersistentCartActor(persistenceId))
+  def props(persistenceId: String): Props = Props(new PersistentCartActor(persistenceId))
+  def itsCheckout(cartId: String): String = cartId + "_checkout"
 }
 
 class PersistentCartActor(
@@ -36,7 +38,8 @@ class PersistentCartActor(
         case ItemAdded(item, cart)                                            => nonEmpty(cart.addItem(item), scheduleTimer)
         case CartEmptied                                                      => ???
         case ItemRemoved(item, cart) if cart.contains(item) && cart.size == 1 => empty
-        case ItemRemoved(item, cart) if cart.size > 1                         => nonEmpty(cart.removeItem(item), targetTimer)
+        case ItemRemoved(item, cart) if cart.contains(item) && cart.size > 1  => nonEmpty(cart.removeItem(item), targetTimer)
+        case ItemRemoved(item, cart) => nonEmpty(cart,targetTimer)
         case CheckoutStarted(checkoutRef, cart)                               => inCheckout(cart)
       }
     )
@@ -61,7 +64,7 @@ class PersistentCartActor(
           updateState(event, Some(timer))
         }
       case CartActor.StartCheckout =>
-        val checkout = context.actorOf(Checkout.props(self), "checkout")
+        val checkout = context.actorOf(Checkout.props(self), itsCheckout(this.persistenceId))
         persist(CheckoutStarted(checkoutRef = checkout, cart = cart)) { event =>
           sender() ! ConfirmCheckoutStarted(checkout)
           updateState(event)

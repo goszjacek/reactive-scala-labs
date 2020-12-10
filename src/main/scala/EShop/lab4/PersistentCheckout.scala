@@ -30,7 +30,7 @@ class PersistentCheckout(
   private def schedulePaymentTimer: Cancellable = scheduler.scheduleOnce(timerDuration, self, ExpirePayment)
 
   private def updateState(event: Event, maybeTimer: Option[Cancellable] = None): Unit = {
-    ???
+    context become (
     event match {
       case CheckoutStarted                => selectingDelivery(scheduleCheckoutTimer)
       case DeliveryMethodSelected(method) => selectingPaymentMethod(schedulePaymentTimer)
@@ -38,7 +38,7 @@ class PersistentCheckout(
       case CheckoutCancelled => cancelled
       case PaymentStarted(payment)        => processingPayment(maybeTimer.getOrElse(schedulePaymentTimer))
 
-    }
+    })
   }
 
   def receiveCommand: Receive = LoggingReceive{
