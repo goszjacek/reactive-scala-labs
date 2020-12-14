@@ -40,7 +40,7 @@ class DemoActor(system: ActorSystem) extends Actor {
 
         Thread.sleep(1400)
         cartActor ! GetItems
-        context.system.terminate()
+//        context.system.terminate()
     }
 
 }
