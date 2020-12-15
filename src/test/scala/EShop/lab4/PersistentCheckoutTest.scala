@@ -119,7 +119,7 @@ class PersistentCheckoutTest
     checkoutActorAfterRestart ! SelectPayment(paymentMethod)
     fishForMessage() {
       case m: String if m == processingPaymentMsg => true
-      case _: OrderManager.ConfirmPaymentStarted  => false
+      case _: PaymentStarted                      => false
     }
   }
 
@@ -135,7 +135,7 @@ class PersistentCheckoutTest
     checkoutActor ! SelectPayment(paymentMethod)
     fishForMessage() {
       case m: String if m == processingPaymentMsg => true
-      case _: OrderManager.ConfirmPaymentStarted  => false
+      case _: PaymentStarted                      => false
     }
     //restart actor
     val checkoutActorAfterRestart: ActorRef = ???
@@ -157,10 +157,10 @@ class PersistentCheckoutTest
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     checkoutActor ! SelectPayment(paymentMethod)
     Thread.sleep(2000)
-    checkoutActor ! ConfirmPaymentReceived
+    checkoutActor ! ReceivePayment
     fishForMessage() {
-      case m: String if m == cancelledMsg        => true
-      case _: OrderManager.ConfirmPaymentStarted => false
+      case m: String if m == cancelledMsg => true
+      case _: PaymentStarted              => false
     }
   }
 
@@ -176,11 +176,11 @@ class PersistentCheckoutTest
     checkoutActor ! SelectPayment(paymentMethod)
     fishForMessage() {
       case m: String if m == processingPaymentMsg => true
-      case _: OrderManager.ConfirmPaymentStarted  => false
+      case _: PaymentStarted                      => false
     }
     //restart actor
     val checkoutActorAfterRestart: ActorRef = ???
-    checkoutActorAfterRestart ! ConfirmPaymentReceived
+    checkoutActorAfterRestart ! ReceivePayment
     expectMsg(closedMsg)
   }
 
@@ -196,9 +196,9 @@ class PersistentCheckoutTest
     checkoutActor ! SelectPayment(paymentMethod)
     fishForMessage() {
       case m: String if m == processingPaymentMsg => true
-      case _: OrderManager.ConfirmPaymentStarted  => false
+      case _: PaymentStarted                      => false
     }
-    checkoutActor ! ConfirmPaymentReceived
+    checkoutActor ! ReceivePayment
     expectMsg(closedMsg)
     //restart actor
     val checkoutActorAfterRestart: ActorRef = ???

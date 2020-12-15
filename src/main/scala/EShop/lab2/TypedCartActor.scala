@@ -1,5 +1,6 @@
 package EShop.lab2
 
+import EShop.lab3.TypedOrderManager
 import akka.actor.Cancellable
 import akka.actor.TypedActor.{context, self}
 import EShop.lab3.TypedOrderManager

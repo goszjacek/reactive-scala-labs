@@ -1,5 +1,6 @@
 package EShop.lab4
 
+import EShop.lab2.Checkout.ReceivePayment
 import EShop.lab2.TypedCartActor
 import EShop.lab3.TypedOrderManager
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
