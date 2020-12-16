@@ -10,6 +10,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -35,9 +36,9 @@ class PaymentTest
 
     payment ! DoPayment
 
-    manager.expectMsg(PaymentRestarted)
-    manager.expectMsg(PaymentRestarted)
-    manager.expectMsg(PaymentConfirmed)
+    manager.expectMsg(10.seconds,PaymentRestarted)
+    manager.expectMsg(10.seconds,PaymentRestarted)
+    manager.expectMsg(10.seconds, PaymentConfirmed)
     server.system.terminate()
   }
 

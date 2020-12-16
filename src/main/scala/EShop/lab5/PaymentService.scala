@@ -1,8 +1,13 @@
 package EShop.lab5
 
+import EShop.lab5.PaymentService.{PaymentClientError, PaymentServerError, PaymentSucceeded}
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.pattern.pipe
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object PaymentService {
 
@@ -21,9 +26,34 @@ class PaymentService(method: String, payment: ActorRef) extends Actor with Actor
   private val http = Http(context.system)
   private val URI  = getURI
 
-  override def preStart(): Unit = ??? //create http request (use http and uri)
+  override def preStart(): Unit = http.singleRequest(HttpRequest(uri=URI)).pipeTo(self)
 
-  override def receive: Receive = ???
+  override def receive: Receive = {
+    case resp @ HttpResponse(StatusCodes.OK, headers, entity, _) =>
+      payment ! PaymentSucceeded
+      resp.discardEntityBytes()
+      context.stop(self)
+
+      // client errors:
+    case resp @ HttpResponse(StatusCodes.BadRequest, _, _, _) =>
+      resp.discardEntityBytes()
+      throw new PaymentClientError()
+    case resp @ HttpResponse(StatusCodes.NotFound, _, _, _) =>
+      resp.discardEntityBytes()
+      throw new PaymentClientError()
+
+      // server errors:
+    case resp @ HttpResponse(StatusCodes.InternalServerError, _, _, _) =>
+      resp.discardEntityBytes()
+      throw new PaymentServerError()
+    case resp @ HttpResponse(StatusCodes.RequestTimeout, _, _, _) =>
+      resp.discardEntityBytes()
+      throw new PaymentServerError()
+    case resp @ HttpResponse(StatusCodes.ImATeapot, _, _, _) =>
+      resp.discardEntityBytes()
+      throw new PaymentServerError()
+  }
+
 
   private def getURI: String = method match {
     case "payu"   => "http://127.0.0.1:8080"
