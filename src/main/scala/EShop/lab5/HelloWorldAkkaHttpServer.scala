@@ -1,31 +1,38 @@
 package EShop.lab5
 
-import java.net.URI
-
-import EShop.lab5.HelloWorldAkkaHttpServer.Greetings
+import EShop.lab5.HelloWorldAkkaHttpServer.Response
+import EShop.lab5.ProductCatalog.{GetItems, Item, Items}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.{HttpApp, Route}
+import akka.pattern.ask
+import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat}
 
-import scala.concurrent.Future
+import java.net.URI
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 object HelloWorldAkkaHttpServer {
-  case class Name(name: String)
-  case class Greetings(greetings: String)
+  case class Query(brand: String, productKeyWords: List[String])
+  case class Response(products: List[Item])
 }
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-  implicit val nameFormat      = jsonFormat1(HelloWorldAkkaHttpServer.Name)
-  implicit val greetingsFormat = jsonFormat1(HelloWorldAkkaHttpServer.Greetings)
+  implicit val queryFormat     = jsonFormat2(HelloWorldAkkaHttpServer.Query)
 
   //custom formatter just for example
   implicit val uriFormat = new JsonFormat[java.net.URI] {
     override def write(obj: java.net.URI): spray.json.JsValue = JsString(obj.toString)
-    override def read(json: JsValue): URI = json match {
-      case JsString(url) => new URI(url)
-      case _             => throw new RuntimeException("Parsing exception")
-    }
+    override def read(json: JsValue): URI =
+      json match {
+        case JsString(url) => new URI(url)
+        case _             => throw new RuntimeException("Parsing exception")
+      }
   }
+  implicit val itemFormat     = jsonFormat5(Item)
+  implicit val responseFormat = jsonFormat1(HelloWorldAkkaHttpServer.Response)
 
 }
 
@@ -35,17 +42,29 @@ object HelloWorldAkkaHttpServerApp extends App {
 
 /** Just to demonstrate how one can build akka-http based server with JsonSupport */
 class HelloWorldAkkaHttpServer extends HttpApp with JsonSupport {
-
+  val config      = ConfigFactory.load()
+  val actorSystem = ActorSystem("ProductCatalog", config.getConfig("productcatalog").withFallback(config))
+  val productCatalog = actorSystem.actorOf(
+    ProductCatalog.props(new SearchService()),
+    "productcatalog"
+  )
   override protected def routes: Route = {
-    path("greetings") {
+    path("search") {
       post {
-        entity(as[HelloWorldAkkaHttpServer.Name]) { name =>
+        entity(as[HelloWorldAkkaHttpServer.Query]) { query =>
+          implicit val timeout = Timeout(6 seconds)
+          print("Asking for search\n")
+          val future = productCatalog ? GetItems(query.brand, query.productKeyWords)
+          val result = Await.result(future, timeout.duration).asInstanceOf[Items]
           complete {
-            Future.successful(Greetings(s"Hello ${name.name}"))
+            Future.successful(Response(result.items))
           }
         }
       }
     }
   }
+  //  example request:
+  //    {"brand":"Starbucks", "productKeyWords" : ["Frappuccino", "Coffee" ,"Drink"]}
+  //  POST http://localhost:9000/search
 
 }
