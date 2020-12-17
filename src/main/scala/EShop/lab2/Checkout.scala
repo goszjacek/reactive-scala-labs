@@ -27,8 +27,11 @@ object Checkout {
   case object ConfirmPaymentReceived              extends Command
 
   sealed trait Event
-  case object CheckOutClosed                   extends Event
-  case class PaymentStarted(payment: ActorRef) extends Event
+  case object CheckOutClosed                        extends Event
+  case class PaymentStarted(payment: ActorRef)      extends Event
+  case object CheckoutStarted                       extends Event
+  case object CheckoutCancelled                     extends Event
+  case class DeliveryMethodSelected(method: String) extends Event
 
   def props(cart: ActorRef) = Props(new Checkout(cart))
 }

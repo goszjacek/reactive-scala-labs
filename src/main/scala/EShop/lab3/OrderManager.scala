@@ -1,19 +1,14 @@
 package EShop.lab3
 
-import EShop.lab2.TypedCartActor.StartCheckout
 import EShop.lab2.{CartActor, Checkout}
 import EShop.lab3.OrderManager._
 import EShop.lab3.Payment.DoPayment
-import akka.actor.Status.Success
-import akka.actor.typed.Props
 import akka.actor.{Actor, ActorRef}
 import akka.event.{Logging, LoggingReceive}
-import akka.pattern.ask
 import akka.util.Timeout
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 object OrderManager {
 
